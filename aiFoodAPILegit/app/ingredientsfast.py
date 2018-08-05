@@ -2,44 +2,44 @@ import pandas as pd
 import random
 import json
 import numpy as np
+import scipy
+from sklearn.cluster import KMeans
+
+global dfs
+global dic
+global values
+global new_count
+global train
+
+df = pd.read_csv('/Users/shiningsunnyday/Desktop/Food/ingredients.csv')
+train = pd.read_json('/Users/shiningsunnyday/Desktop/Food/train.json')
+ingredients = []; count = {}
+
+for recipe in train.values:
+            
+    for ingredient in recipe[2]:
+        
+        if ingredient not in ingredients:
+            ingredients.append(ingredient)
+            count[ingredient] = 0
+        else:
+            count[ingredient] += 1
+            
+dfs = df.loc[:, 'Ingredients':].dropna()
+            
+new_count = {x: count[x] for x in count.keys() if count[x] > 10}
+
+dfs = dfs[dfs.Ingredients.isin(new_count.keys())]
+dfs = dfs.reset_index().loc[:, 'Ingredients':]
+
+df_dic = {'protein': dfs.sort_values(by = ['protein']),
+          'fat': dfs.sort_values(by = ['fat']),
+          'carbs': dfs.sort_values(by = ['carbs'])}
+
+values = {x[0]: [x[1:], 0] for x in dfs[['Ingredients', 'calories', 'protein', 'fat', 'carbs']].values}
+dic = {0: 'calories', 1: 'protein', 2: 'fat', 3: 'carbs'}
 
 def main(target_mcros):
-
-    global dfs
-    global dic
-    global values
-    global new_count
-    global train
-    
-    df = pd.read_csv('/Users/shiningsunnyday/Desktop/Food/ingredients.csv').loc[1:10]
-    print(df)
-    train = pd.read_json('/Users/shiningsunnyday/Desktop/Food/train.json')
-    ingredients = []; count = {}
-
-    for recipe in train.values:
-                
-        for ingredient in recipe[2]:
-            
-            if ingredient not in ingredients:
-                ingredients.append(ingredient)
-                count[ingredient] = 0
-            else:
-                count[ingredient] += 1
-                
-    dfs = df.loc[:, 'Ingredients':].dropna()
-                
-    new_count = {x: count[x] for x in count.keys() if count[x] > 10}
-
-    dfs = dfs[dfs.Ingredients.isin(new_count.keys())]
-    dfs = dfs.reset_index().loc[:, 'Ingredients':]
-
-    df_dic = {'protein': dfs.sort_values(by = ['protein']),
-              'fat': dfs.sort_values(by = ['fat']),
-              'carbs': dfs.sort_values(by = ['carbs'])}
-
-    values = {x[0]: [x[1:], 0] for x in dfs[['Ingredients', 'calories', 'protein', 'fat', 'carbs']].values}
-    dic = {0: 'calories', 1: 'protein', 2: 'fat', 3: 'carbs'}
-
 
     mcros, initial_list = generate([0 for x in range(len(target_mcros))], target_mcros, [])
     initial_list, mcros, error = iterate(initial_list, mcros, target_mcros)
@@ -47,7 +47,6 @@ def main(target_mcros):
     initial_list, mcros, error = iterate(initial_list, mcros, target_mcros)
     initial_list, mcros, error = iterate(initial_list, mcros, target_mcros)
     initial_list, mcros, error = iterate(initial_list, mcros, target_mcros)
-
     
     display(mcros, initial_list, sum([abs(mcros[i] - target_mcros[i]) for i in range(1, len(dic))]), target_mcros)
     return initial_list, mcros
@@ -155,7 +154,7 @@ def feedback(arr, initial_list, mcros):
     else:
         return [x[0] for x in initial_list]
 
-target_mcros = list(map(int, input().split()))
+'''target_mcros = list(map(int, input().split()))
 
 current_list, mcros = main(target_mcros)
 
@@ -173,4 +172,136 @@ while True:
         break
 
 
-print(final_list)
+print(final_list)'''
+
+class Graph():
+
+    def __init__(self):
+        self.vert_dict = {}
+        self.num_vertices = 0
+
+    def __iter__(self):
+        return iter(self.vert_dict.values())
+
+    def add_vertex(self, node):
+        self.num_vertices = self.num_vertices + 1
+        new_vertex = Vertex(node)
+        self.vert_dict[node] = new_vertex
+        return new_vertex
+
+    def get_vertex(self, n):
+        if n in self.vert_dict:
+            return self.vert_dict[n]
+        else:
+            return None
+
+    def add_edge(self, frm, to):
+        if frm not in self.vert_dict:
+            self.add_vertex(frm)
+        if to not in self.vert_dict:
+            self.add_vertex(to)
+        
+        vertex1 = self.vert_dict[frm]
+        vertex2 = self.vert_dict[to]
+        
+        if vertex1 not in vertex2.get_connections():
+            vertex1.add_neighbor(vertex2, 1)
+            vertex2.add_neighbor(vertex1, 1)
+        
+        weight = vertex1.get_weight(vertex2)
+        
+        vertex1.adjacent[vertex2] = weight + 1
+        vertex2.adjacent[vertex1] = weight + 1
+
+    def get_vertices(self):
+        return self.vert_dict.keys()
+
+class Vertex():
+
+    def __init__(self, node):
+        self.id = node
+        self.adjacent = {}
+
+    def __str__(self):
+        return str(self.id) + ' adjacent: ' + str([x.id for x in self.adjacent])
+
+    def add_neighbor(self, neighbor, weight=0):
+        self.adjacent[neighbor] = weight
+
+    def get_connections(self):
+        return self.adjacent.keys()  
+
+    def get_id(self):
+        return self.id
+
+    def get_weight(self, neighbor):
+        return self.adjacent[neighbor]
+
+'''g = Graph()
+
+for ing in new_count.keys():
+    
+    g.add_vertex(ing)
+
+for recipe in train.values[:20]:
+
+    for i in range(len(recipe[2])):   
+
+        for j in range(i + 1, len(recipe[2])):
+
+            ing1 = recipe[2][i]
+            ing2 = recipe[2][j]
+            g.add_edge(ing1, ing2)
+        
+ver1 = g.vert_dict['salt']
+print(sorted([[x.id, ver1.get_weight(x)] for x in ver1.get_connections()], key = lambda x: 1/x[1]))'''
+
+test_macros = [2000, 100, 50, 250]
+listTo, macros = main(test_macros)
+
+
+laplacian_matrix = pd.read_csv('laplacian_matrix.csv').iloc[:,1:]
+
+def k_means(X, n_clusters):
+    
+    kmeans = KMeans(n_clusters=n_clusters, random_state=1231)
+    return kmeans.fit(X).labels_
+
+dic = dict(dfs.loc[:]['Ingredients'])
+dic = {dic[x]: x for x in dic}
+
+def laplacian(array):
+    
+    arr = [dic[x] for x in array]
+    laplacian = laplacian_matrix.iloc[arr, arr].values
+    return laplacian
+
+def spectral_cluster(array, num_meals):
+    
+    X = laplacian(array)
+    eigen_vals, eigen_vects = scipy.sparse.linalg.eigs(X, num_meals)
+    X = eigen_vects.real
+    rows_norm = np.linalg.norm(X, axis=1, ord=2)
+    Y = (X.T / rows_norm).T
+    labels = k_means(Y, num_meals)
+    dic = dict(zip(array, labels))
+    unique, counts = np.unique(labels, return_counts=True)
+    return [[x for x in dic.keys() if dic[x] == j] for j in range(num_meals)]
+
+listToNames = [x[0] for x in listTo]
+for i in spectral_cluster(listToNames, 3):
+    print(i)
+
+
+
+
+
+
+
+
+
+
+
+
+
+    

@@ -102,7 +102,12 @@ class SecondViewController: UIViewController {
             
             let requirements: String = "\(calories.text!)_\(protein.text!)_\(fat.text!)_\(carbs.text!)"
             
-            var str: String = "http://localhost:5000/macros/\(requirements)"
+            destination.k = Double(calories.text!)!
+            destination.p = Double(protein.text!)!
+            destination.f = Double(fat.text!)!
+            destination.c = Double(carbs.text!)!
+            
+            var str: String = "https://foodapp-api-heroku.herokuapp.com/macros/\(requirements)"
             
             Alamofire.request(str).responseJSON { response in
                 
@@ -110,6 +115,25 @@ class SecondViewController: UIViewController {
                 if let data = response.data {
                     
                     let ingredientList: IngredientList? = try? JSONDecoder().decode(IngredientList.self, from: data)
+                    destination.calories.text = "\(ingredientList!.requirements[0])"
+                    destination.total_cals = Double(destination.calories.text!)!
+                    destination.protein.text = "\(ingredientList!.requirements[1])"
+                    destination.total_protein = Double(destination.protein.text!)!
+                    destination.fat.text = "\(ingredientList!.requirements[2])"
+                    destination.total_fat = Double(destination.fat.text!)!
+                    destination.carbs.text = "\(ingredientList!.requirements[3])"
+                    destination.total_carbs = Double(destination.carbs.text!)!
+                    
+                    if let cals = Double(self.calories.text!),
+                        let pro = Double(self.protein.text!),
+                        let fat = Double(self.fat.text!),
+                        let carbs = Double(self.carbs.text!) {
+                        
+                        
+                        destination.criteria = [cals, pro, fat, carbs]
+                        
+                    }
+                    
                     destination.ingredientList = ingredientList!
                     destination.tableView.reloadData()
                     

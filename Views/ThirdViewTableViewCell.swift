@@ -10,7 +10,6 @@ import UIKit
 
 class ThirdViewTableViewCell: UITableViewCell {
     
-
     @IBOutlet weak var ingredientLabel: UILabel!
     @IBOutlet weak var subtitle: UILabel!
     
