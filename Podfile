@@ -13,6 +13,6 @@ target 'aiFood' do
   pod 'Firebase/Database'
   pod 'Firebase/Storage'
   pod 'SwiftyJSON', '~> 4.1'
-  pod 'Alamofire', '~> 4.7'
+  pod 'Alamofire'
 
 end

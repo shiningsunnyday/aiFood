@@ -9,7 +9,7 @@
 import UIKit
 import Foundation
 
-struct Ingredient: Codable {
+class Ingredient: Codable {
     
     var label: String
     var amount: String

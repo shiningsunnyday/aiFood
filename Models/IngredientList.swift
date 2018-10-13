@@ -19,4 +19,18 @@ struct IngredientList: Codable {
         self.listToDisplay = listToDisplay
     }
     
+    mutating func insert(ingredient: Ingredient, row: Int) {
+        
+        listToDisplay.insert(ingredient, at: row)
+        requirements = [requirements[0] + Int(ingredient.calories), requirements[1] + Int(ingredient.protein), requirements[2] + Int(ingredient.fat), requirements[3] + Int(ingredient.carbs)]
+        
+    }
+    
+    mutating func remove(ingredient: Ingredient, row: Int) {
+        
+        listToDisplay.remove(at: row)
+        requirements = [requirements[0] - Int(ingredient.calories), requirements[1] - Int(ingredient.protein), requirements[2] - Int(ingredient.fat), requirements[3] - Int(ingredient.carbs)]
+        
+    }
+    
 }

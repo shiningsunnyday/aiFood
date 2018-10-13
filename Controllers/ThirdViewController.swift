@@ -11,7 +11,13 @@ import Alamofire
 
 class ThirdViewController: UITableViewController {
     
-    var ingredientList: IngredientList?
+    var activityIndicator: UIActivityIndicatorView = UIActivityIndicatorView()
+    var ingredientList: IngredientList? { didSet {
+        
+        activityIndicator.stopAnimating()
+        
+        }}
+
     var listOfIngredientLists: ClusterResult?
     var criteria: [Double] = [0, 0, 0, 0]
     var k: Double = -10000
@@ -25,38 +31,65 @@ class ThirdViewController: UITableViewController {
     
     var total_carbs: Double = 0
     
-    @IBOutlet var calories: UITextField!
-    @IBOutlet var protein: UITextField!
-    @IBOutlet var fat: UITextField!
-    @IBOutlet var carbs: UITextField!
+    @IBOutlet var calories: UILabel!
+    @IBOutlet var protein: UILabel!
+    @IBOutlet var fat: UILabel!
+    @IBOutlet var carbs: UILabel!
     
     
     @IBAction func cluster(_ sender: Any) {
         
-        var tempList: [String] = []
+        print("hi")
         
-        if let ingList = ingredientList?.listToDisplay {
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        
+        
+        
+        guard let identifier = segue.identifier else { return }
+        
+        if identifier == "cluster" {
             
-            for i in ingList {
+            var tempList: [String] = []
+            
+            if let ingList = ingredientList?.listToDisplay {
                 
-                tempList.append(i.label.replacingOccurrences(of: " ", with: "_"))
-                
-            }
-            
-            let queryString: String = tempList.joined(separator: ",")
-            
-            let str: String = "https://foodapp-api-heroku.herokuapp.com/?ingredients=\(queryString)&num_meals=3"
-            
-            Alamofire.request(str).responseJSON { response in
-                
-                if let data = response.data {
+                for i in ingList {
                     
-                    self.listOfIngredientLists = try? JSONDecoder().decode(ClusterResult.self, from: data)
+                    tempList.append(i.label.replacingOccurrences(of: " ", with: "_"))
                     
-
                 }
                 
+                let queryString: String = tempList.joined(separator: ",")
+                
+                let str: String = "https://foodapp-api-heroku.herokuapp.com/cluster/?ingredients=\(queryString)&num_meals=3"
+                
+                
+                Alamofire.request(str).responseJSON { response in
+                    
+                    if let data = response.data {
+                        
+                        
+                        self.listOfIngredientLists = try? JSONDecoder().decode(ClusterResult.self, from: data)
+                        
+                        let destination = segue.destination as! ClusterViewController
+                        
+                        if let result = self.listOfIngredientLists {
+                        destination.result = result
+                        destination.collectionView!.reloadData()
+                            
+                            
+                            
+                        } else { return }
+                    }
+                    
+                    }
+                
+                
+                
             }
+            
             
             
         }
@@ -66,19 +99,25 @@ class ThirdViewController: UITableViewController {
     
     @IBAction func generateList(_ sender: Any) {
         
+        activityIndicator.startAnimating()
+        
         let requirements: String = "\(Int(criteria[0]))_\(Int(criteria[1]))_\(Int(criteria[2]))_\(Int(criteria[3]))"
         let str: String = "https://foodapp-api-heroku.herokuapp.com/macros/\(requirements)"
+        
+        
         Alamofire.request(str).responseJSON { response in
             
             if let data = response.data {
                 
                 let ingList: IngredientList? = try? JSONDecoder().decode(IngredientList.self, from: data)
+                
+                if let ingList = ingList {
                 self.ingredientList = ingList
                 
-                self.total_cals = Double(ingList!.requirements[0])
-                self.total_protein = Double(ingList!.requirements[1])
-                self.total_fat = Double(ingList!.requirements[2])
-                self.total_carbs = Double(ingList!.requirements[3])
+                self.total_cals = Double(ingList.requirements[0])
+                self.total_protein = Double(ingList.requirements[1])
+                self.total_fat = Double(ingList.requirements[2])
+                self.total_carbs = Double(ingList.requirements[3])
                 self.k = self.total_cals - self.criteria[0]
                 self.p = self.total_protein - self.criteria[1]
                 self.f = self.total_fat - self.criteria[2]
@@ -87,8 +126,9 @@ class ThirdViewController: UITableViewController {
                 self.protein.text = "\(Int(self.total_protein))"
                 self.fat.text = "\(Int(self.total_fat))"
                 self.carbs.text = "\(Int(self.total_carbs))"
-                
+                self.activityIndicator.stopAnimating()
                 self.tableView.reloadData()
+                }
                 
             }
             
@@ -115,11 +155,15 @@ class ThirdViewController: UITableViewController {
                 if let data = response.data {
 
                     let ingredient: Ingredient? = try? JSONDecoder().decode(Ingredient.self, from: data)
-                    self.ingredientList?.listToDisplay.append(ingredient!)
-                    self.total_cals += ingredient!.calories
-                    self.total_protein += ingredient!.protein
-                    self.total_fat += ingredient!.fat
-                    self.total_carbs += ingredient!.carbs
+                    
+                    if let ingredient = ingredient {
+                    self.ingredientList?.listToDisplay.append(ingredient)
+                    self.total_cals += ingredient.calories
+                    self.total_protein += ingredient.protein
+                    self.total_fat += ingredient.fat
+                    self.total_carbs += ingredient.carbs
+                    }
+                    
                     self.calories.text = "\(Int(self.total_cals))"
                     self.protein.text = "\(Int(self.total_protein))"
                     self.fat.text = "\(Int(self.total_fat))"
@@ -150,6 +194,13 @@ class ThirdViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        activityIndicator.center = CGPoint(x: self.tableView.center.x, y: self.view.center.y + 280)
+        activityIndicator.hidesWhenStopped = true
+        activityIndicator.activityIndicatorViewStyle = .gray
+        view.addSubview(activityIndicator)
+        
+        activityIndicator.startAnimating()
+        
         // Do any additional setup after loading the view, typically from a nib.
         
     }
@@ -178,9 +229,8 @@ class ThirdViewController: UITableViewController {
         let ingredient: Ingredient = listToDisplay[indexPath.row]
 
         cell.ingredientLabel.text = "\(ingredient.amount) of \(ingredient.label)"
-        cell.subtitle.text = "Protein: \(ingredient.protein) Fat: \(ingredient.fat) Carbs: \(ingredient.carbs)"
+        cell.subtitle.text = "Protein: \(Int(ingredient.protein)) Fat: \(Int(ingredient.fat)) Carbs: \(Int(ingredient.carbs))"
             
-        cell.accessoryType = .detailButton
             
             
         
@@ -191,6 +241,7 @@ class ThirdViewController: UITableViewController {
         
     }
     
+
   
     
     

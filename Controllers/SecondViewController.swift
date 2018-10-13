@@ -18,13 +18,15 @@ class SecondViewController: UIViewController {
     @IBOutlet weak var dietPlan: UISegmentedControl!
     @IBOutlet weak var activeness: UISegmentedControl!
     
+    @IBOutlet weak var goal: UISegmentedControl!
+    
     @IBOutlet weak var calories: UITextField!
     @IBOutlet weak var protein: UITextField!
     @IBOutlet weak var fat: UITextField!
     @IBOutlet weak var carbs: UITextField!
     
     @IBOutlet weak var calculateValue: UIButton!
-    
+    var ingredientList: IngredientList? = IngredientList(listToDisplay: [], requirements: [])
     @IBAction func calculate(_ sender: Any) {
         
         if let recordedAge = Double(age.text!), let recordedWeight = Double(weight.text!), let recordedHeight = Double(height.text!) {
@@ -48,6 +50,19 @@ class SecondViewController: UIViewController {
                 REE = 1.55 * REE
             case 3:
                 REE = 1.725 * REE
+            default:
+                break
+            }
+            
+            switch goal.selectedSegmentIndex {
+            case 0:
+                REE = 0.8 * REE
+            case 1:
+                REE = 0.9 * REE
+            case 2:
+                break
+            case 3:
+                REE = 1.1 * REE
             default:
                 break
             }
@@ -85,6 +100,32 @@ class SecondViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(FirstViewController.dismissKeyboard)))
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillChange(notification:)), name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillChange(notification:)), name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillChange(notification:)), name: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillShow, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillHide, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil)
+    }
+    
+    @objc func keyboardWillChange(notification: Notification) {
+        print("Keyboard will show: \(notification.name.rawValue)")
+        
+        guard let keyboardRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue else {
+            return
+        }
+        
+        if notification.name == Notification.Name.UIKeyboardWillShow ||
+            notification.name == Notification.Name.UIKeyboardWillChangeFrame {
+            view.frame.origin.y = -keyboardRect.height + 64
+        } else {
+            view.frame.origin.y = 0
+        }
     }
 
     override func didReceiveMemoryWarning() {
@@ -107,41 +148,52 @@ class SecondViewController: UIViewController {
             destination.f = Double(fat.text!)!
             destination.c = Double(carbs.text!)!
             
-            var str: String = "https://foodapp-api-heroku.herokuapp.com/macros/\(requirements)"
+            let str: String = "https://foodapp-api-heroku.herokuapp.com/macros/\(requirements)"
             
-            Alamofire.request(str).responseJSON { response in
+            
                 
-                
-                if let data = response.data {
+                Alamofire.request(str).responseJSON { response in
                     
-                    let ingredientList: IngredientList? = try? JSONDecoder().decode(IngredientList.self, from: data)
-                    destination.calories.text = "\(ingredientList!.requirements[0])"
-                    destination.total_cals = Double(destination.calories.text!)!
-                    destination.protein.text = "\(ingredientList!.requirements[1])"
-                    destination.total_protein = Double(destination.protein.text!)!
-                    destination.fat.text = "\(ingredientList!.requirements[2])"
-                    destination.total_fat = Double(destination.fat.text!)!
-                    destination.carbs.text = "\(ingredientList!.requirements[3])"
-                    destination.total_carbs = Double(destination.carbs.text!)!
+                    print(response)
                     
-                    if let cals = Double(self.calories.text!),
-                        let pro = Double(self.protein.text!),
-                        let fat = Double(self.fat.text!),
-                        let carbs = Double(self.carbs.text!) {
+                    if let data = response.data {
+                        
+                        self.ingredientList = try? JSONDecoder().decode(IngredientList.self, from: data)
+                        
+                        if let ingredientList = self.ingredientList {
+                            
+                            destination.calories.text = "\(ingredientList.requirements[0])"
+                            destination.total_cals = Double(destination.calories.text!)!
+                            destination.protein.text = "\(ingredientList.requirements[1])"
+                            destination.total_protein = Double(destination.protein.text!)!
+                            destination.fat.text = "\(ingredientList.requirements[2])"
+                            destination.total_fat = Double(destination.fat.text!)!
+                            destination.carbs.text = "\(ingredientList.requirements[3])"
+                            destination.total_carbs = Double(destination.carbs.text!)!
+                        }
                         
                         
-                        destination.criteria = [cals, pro, fat, carbs]
+                        
+                        if let cals = Double(self.calories.text!),
+                            let pro = Double(self.protein.text!),
+                            let fat = Double(self.fat.text!),
+                            let carbs = Double(self.carbs.text!) {
+                            
+                            
+                            destination.criteria = [cals, pro, fat, carbs]
+                            
+                        }
+                        destination.ingredientList = self.ingredientList!
+                        destination.tableView.reloadData()
+                        
+                        
                         
                     }
-                    
-                    destination.ingredientList = ingredientList!
-                    destination.tableView.reloadData()
                     
                 }
                 
             
             
-            }
         default:
             break
         }
@@ -151,5 +203,16 @@ class SecondViewController: UIViewController {
     
 
 
+}
+
+extension SecondViewController {
+    func hideKeyboardWhenTappedAround() {
+        let tap: UITapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(FirstViewController.dismissKeyboard))
+        tap.cancelsTouchesInView = false
+        view.addGestureRecognizer(tap)
+    }
+    @objc func dismissKeyboard() {
+        view.endEditing(true)
+    }
 }
 
